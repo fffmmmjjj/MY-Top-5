@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- 이 파일은 웹페이지의 뼈대(구조)를 만드는 곳입니다.
-     화면에 무엇을 보여줄지(제목, 검색창, Top5 목록, 추가 버튼 등)를 여기에 적습니다. -->
+  화면에 무엇을 보여줄지(제목, 검색창, Top5 목록, 추가 버튼 등)를 여기에 적습니다. -->
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -11,11 +11,294 @@
     <link rel="stylesheet" href="css/style.css" />
 
     <!-- 동작(목록 보여주기, 검색, 추가 등)을 적어 둔 JS 파일을 불러옵니다.
-         defer: HTML을 다 읽은 뒤에 JS가 실행되도록 합니다. -->
-    <script src="js/main.js" defer></script>
+        defer: HTML을 다 읽은 뒤에 JS가 실행되도록 합니다. -->
+    <script>
+      const LOCAL_DATA_URL = 'data/top5_lists.json';
+      // ⚠️ 아래 주소를 본인의 n8n Webhook URL로 바꿔주세요.
+      const N8N_WEBHOOK_URL = 'http://localhost:5678/webhook-test/a06ee3c2-025c-40c7-bc3f-64bb4427c3e7';
+      const AGE_RATINGS = ['전체이용가', '8세이상', '15세이상', '18세이상', '청소년 금지'];
+      
+      let lists = [];
+      let $lists, $search, $addBtn, $addModal, $addModalClose, $addForm, $addFormCancel;
+      let $itemsContainer, $detailModal, $detailModalClose, $detailModalOverlay, $detailContent;
+      
+      function escapeHtml(str){
+        return String(str)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+      }
+      
+      function getTodayDate(){
+        return new Date().toISOString().split('T')[0];
+      }
+      
+      function createItemInputs(){
+        let html = '';
+        for(let i = 1; i <= 5; i++){
+          html += `<div class="item-group"><h4>${i}번</h4><div class="item-input-group">
+            <input type="text" class="item-title" placeholder="${i}번 제목" data-index="${i}" />
+            <select class="item-age" data-index="${i}">
+              ${AGE_RATINGS.map(r => `<option value="${r}">${r}</option>`).join('')}
+            </select></div></div>`;
+        }
+        return html;
+      }
+      
+      function openAddModal(){ $itemsContainer.innerHTML = createItemInputs(); $addForm.reset(); $addModal.style.display = 'flex'; const authorNameElement = document.getElementById('authorName'); authorNameElement.focus(); authorNameElement.select(); }
+      function closeAddModal(){ $addModal.style.display = 'none'; }
+      
+      function openDetailModal(item){
+        function ageClass(r){
+          if(!r) return 'age-badge';
+          if(r.includes('전체')) return 'age-badge all';
+          if(r === '8세이상') return 'age-badge _8';
+          if(r === '15세이상') return 'age-badge _15';
+          if(r === '18세이상') return 'age-badge _18';
+          if(r.includes('청소년')) return 'age-badge ban';
+          return 'age-badge';
+        }
+
+        const itemsHtml = (item.items || []).map(i => {
+          const age = (typeof i === 'string') ? '' : (i.ageRating || '표기없음');
+          const genre = (typeof i === 'string') ? '' : (i.genre || '');
+          const cls = age ? ageClass(age) : 'age-badge';
+          const ageHtml = age ? `<span class="${cls}">${escapeHtml(age)}</span>` : '';
+          const genreHtml = genre ? `<span style="font-size:0.85rem;color:#666;margin-left:0.6rem">${escapeHtml(genre)}</span>` : '';
+          return `<li><span class="detail-item-title">${escapeHtml(i.title || i)}</span>${ageHtml}${genreHtml}</li>`;
+        }).join('');
+
+        const html = `
+          <div class="detail-view">
+            <h2>${escapeHtml(item.title)}</h2>
+            ${item.genre ? `<div class="card-genre" style="margin-top:6px;margin-bottom:8px">${escapeHtml(item.genre)}</div>` : ''}
+            <p class="detail-description">${escapeHtml(item.description || item.comment || '')}</p>
+            <div class="detail-items">
+              <h3>Top 5</h3>
+              <ol>${itemsHtml}</ol>
+            </div>
+          </div>
+        `;
+
+        $detailContent.innerHTML = html;
+        $detailModal.style.display = 'flex';
+      }
+      
+      function closeDetailModal(){ $detailModal.style.display = 'none'; }
+      
+      function renderLists(items){
+        $lists.innerHTML = '';
+        if(items.length === 0){ $lists.innerHTML = '<p>등록된 Top5 목록이 없습니다.</p>'; return; }
+        const frag = document.createDocumentFragment();
+        items.forEach(item => {
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.setAttribute('role', 'button');
+          card.setAttribute('tabindex', '0');
+          card.innerHTML = `<h3>${escapeHtml(item.title)}</h3>${item.genre ? `<div class="card-genre">${escapeHtml(item.genre)}</div>` : ''}<p class="comment">${escapeHtml(item.description || item.comment || '')}</p><button type="button" class="delete-button" aria-label="삭제">삭제</button>`;
+          const deleteBtn = card.querySelector('.delete-button');
+          deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteItem(item.id);
+          });
+          card.addEventListener('click', () => openDetailModal(item));
+          card.addEventListener('keypress', (e) => { if(e.key === 'Enter' || e.key === ' ') openDetailModal(item); });
+          frag.appendChild(card);
+        });
+        $lists.appendChild(frag);
+      }
+
+      function deleteItem(id){
+        if(typeof id === 'undefined') return;
+        lists = lists.filter(item => item.id !== id);
+        try{ localStorage.setItem('top5_lists', JSON.stringify(lists)); } catch(e){ console.warn('삭제 후 로컬 저장 실패:', e); }
+        renderLists(lists);
+      }
+      
+      
+      function filterLists(q){
+        const t = q.trim().toLowerCase();
+        if(!t) return lists;
+        return lists.filter(l=> (l.title||'').toLowerCase().includes(t) || (l.items||[]).map(i => typeof i === 'string' ? i : i.title).join(' ').toLowerCase().includes(t));
+      }
+      
+      function debounce(fn, wait=200){ let t; return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); }; }
+      const onSearch = debounce((ev)=>{ renderLists(filterLists(ev.target.value || '')); });
+      
+      async function sendToN8n(payload){
+        try{
+          const response = await fetch(N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if(!response.ok){
+            console.warn('n8n 웹훅 전송 실패:', response.status, response.statusText);
+            return false;
+          }
+          console.log('n8n 웹훅 전송 성공');
+          return true;
+        }catch(error){
+          console.warn('n8n 웹훅 전송 오류:', error);
+          return false;
+        }
+      }
+
+      async function handleFormSubmit(e){
+        e.preventDefault();
+        const authorName = document.getElementById('authorName').value.trim();
+        const listTitle = document.getElementById('listTitle').value.trim();
+        const listGenre = document.getElementById('listGenre').value ? document.getElementById('listGenre').value.trim() : '';
+        const listDescription = document.getElementById('listDescription').value.trim();
+        if(!authorName || !listTitle){ alert('작성자이름과 제목은 필수입니다.'); return; }
+        const items = [];
+        for(let i = 1; i <= 5; i++){
+          const titleInput = document.querySelector(`.item-title[data-index="${i}"]`);
+          const ageInput = document.querySelector(`.item-age[data-index="${i}"]`);
+          if(titleInput && titleInput.value.trim()){
+            items.push({
+              title: titleInput.value.trim(),
+              ageRating: ageInput ? ageInput.value : '전체이용가'
+            });
+          }
+        }
+        if(items.length === 0){ alert('최소 1개 이상의 항목을 입력하세요.'); return; }
+        const newItem = {
+          id: Math.max(0, ...lists.map(l => l.id || 0)) + 1,
+          author: authorName, title: listTitle, genre: listGenre,
+          description: listDescription, items: items, comment: listDescription
+        };
+
+        // 먼저 n8n으로 전송을 시도합니다. 실패하면 항목을 생성하지 않고 폼을 유지합니다.
+        const sent = await sendToN8n(newItem);
+        if(!sent){
+          alert('n8n 전송에 실패했습니다. 항목은 생성되지 않았습니다. 콘솔을 확인하세요.');
+          return;
+        }
+
+        // 전송 성공 시에만 목록에 추가하고 저장합니다.
+        lists.unshift(newItem);
+        localStorage.setItem('top5_lists', JSON.stringify(lists));
+        closeAddModal();
+        renderLists(lists);
+        alert('성공적으로 추가되고 n8n으로 전송되었습니다!');
+      }
+      
+      function init(){
+        $lists = document.getElementById('lists');
+        $search = document.getElementById('search');
+        $addBtn = document.getElementById('addBtn');
+        $addModal = document.getElementById('addModal');
+        $addModalClose = document.getElementById('addModalClose');
+        $addForm = document.getElementById('addForm');
+        $addFormCancel = document.getElementById('addFormCancel');
+        $itemsContainer = document.getElementById('itemsContainer');
+        $detailModal = document.getElementById('detailModal');
+        $detailModalClose = document.getElementById('detailModalClose');
+        $detailModalOverlay = document.getElementById('detailModalOverlay');
+        $detailContent = document.getElementById('detailContent');
+        
+        $search.addEventListener('input', onSearch);
+        $addBtn.addEventListener('click', openAddModal);
+        $addModalClose.addEventListener('click', closeAddModal);
+        $addFormCancel.addEventListener('click', closeAddModal);
+        $addForm.addEventListener('submit', handleFormSubmit);
+        $detailModalClose.addEventListener('click', closeDetailModal);
+        $detailModalOverlay.addEventListener('click', closeDetailModal);
+        document.addEventListener('keydown', (e) => {
+          if(e.key === 'Escape'){
+            if($addModal.style.display === 'flex') closeAddModal();
+            if($detailModal.style.display === 'flex') closeDetailModal();
+          }
+        });
+        
+        try{
+          const saved = localStorage.getItem('top5_lists');
+          if(saved){
+            lists = JSON.parse(saved);
+            lists.forEach(l => { if(l && l.hasOwnProperty('date')) delete l.date; });
+            renderLists(lists);
+            return;
+          }
+        } catch(e){}
+
+        renderLists(lists);
+      }
+      
+      document.addEventListener('DOMContentLoaded', init);
+    </script>
   </head>
   <body>
-    <!-- 여기에 화면을 만듭니다.
-         예: 상단 제목 / 검색창 / Top5 목록 영역 / 사이드의 "추가하기" 버튼 -->
+    <header class="site-header">
+      <div class="container">
+        <h1>MyTop5</h1>
+        <p class="tagline">내가 좋아하는 영화·드라마 Top 5를 모아보세요</p>
+        <div class="controls">
+          <label for="search" class="visually-hidden">검색</label>
+          <input id="search" type="search" placeholder="제목/작품명 검색" aria-label="검색" />
+          <button id="addBtn" class="btn" onmousedown="document.getElementById('authorName').focus()">추가하기</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- 데이터 추가 모달 -->
+    <div id="addModal" class="modal" style="display: none;">
+      <div class="modal-content add-form-modal">
+        <button class="modal-close" id="addModalClose" aria-label="닫기">&times;</button>
+        <h2>Top5 목록 추가</h2>
+        <form id="addForm">
+          <div class="form-group">
+            <label for="authorName">작성자이름</label>
+            <input type="text" id="authorName" required />
+          </div>
+
+          <div class="form-group">
+            <label for="listTitle">제목</label>
+            <input type="text" id="listTitle" required />
+          </div>
+
+          <div class="form-group">
+            <label for="listGenre">장르</label>
+            <input type="text" id="listGenre" placeholder="예: 액션, 드라마, 로맨스" />
+          </div>
+
+          <div class="form-group">
+            <label for="listDescription">본문</label>
+            <textarea id="listDescription" rows="3"></textarea>
+          </div>
+
+          <div class="form-section-title">Top 5 항목</div>
+          <div id="itemsContainer">
+            <!-- 동적으로 생성됨 -->
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">추가하기</button>
+            <button type="button" class="btn btn-secondary" id="addFormCancel">취소</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 상세 보기 모달 -->
+    <div id="detailModal" class="modal" style="display: none;">
+      <div class="modal-overlay" id="detailModalOverlay"></div>
+      <div class="modal-content detail-modal">
+        <button class="modal-close" id="detailModalClose" aria-label="닫기">&times;</button>
+        <div id="detailContent">
+          <!-- 동적으로 생성됨 -->
+        </div>
+      </div>
+    </div>
+
+    <main class="container" id="main">
+      <section aria-labelledby="lists-heading">
+        <h2 id="lists-heading" class="sr-only">Top5 목록</h2>
+        <div id="lists" class="lists-grid" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer container">
+      <small>MyTop5 — 로컬 데모 · 수정해서 사용하세요</small>
+    </footer>
   </body>
 </html> 

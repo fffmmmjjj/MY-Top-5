@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>n8n 웹후크 테스트</title>
+</head>
+<body>
+
+    <h2>n8n으로 데이터 보내기 테스트</h2>
+    
+    <button onclick="sendDataToN8n()">n8n으로 데이터 전송하기</button>
+
+    <script>
+        function sendDataToN8n() {
+            // ⚠️ [중요] 아래 주소를 본인 n8n 화면에 있는 Test URL로 꼭 바꿔주세요!
+            const webhookUrl = 'http://localhost:5678/webhook-test/a06ee3c2-025c-40c7-bc3f-64bb4427c3e7'; 
+            
+            // n8n으로 보낼 가짜 데이터
+            const myData = {
+                title: "새로운 파일에서 테스트",
+                message: "파일 이름을 바꿔서 보낸 데이터입니다!"
+            };
+
+            // 데이터를 n8n으로 던지는 fetch 함수
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(myData)
+            })
+            .then(response => {
+                if(response.ok) {
+                    alert('n8n으로 전송 성공!');
+                } else {
+                    alert('전송 실패 ㅠㅠ 코드를 확인해보세요.');
+                }
+            })
+            .catch(error => {
+                console.error('에러 발생:', error);
+                alert('에러가 발생했습니다. 콘솔창을 확인하세요.');
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,2 +1,109 @@
-/* 이 파일은 화면의 디자인(색, 크기, 위치, 폰트 등)을 적는 곳입니다.
-   예: 상단 제목 스타일, 검색창 모양, Top5 카드 모양, 버튼 색 등 */
+/* 기본 리셋 */
+* { box-sizing: border-box; }
+html,body{ height:100%; }
+body{
+   margin:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+   background:#fafafa; color:#111;
+}
+
+.container{ max-width:1000px; margin:0 auto; padding:1rem; }
+
+.site-header{ background:linear-gradient(90deg,#264653,#2a9d8f); color:#fff; padding:1.25rem 0; }
+.site-header h1{ margin:0; font-size:1.6rem; }
+.site-header .tagline{ margin:0.25rem 0 0.75rem; opacity:0.95; }
+.controls{ display:flex; gap:0.5rem; align-items:center; }
+#search{ flex:1; padding:0.5rem 0.75rem; border-radius:6px; border:1px solid rgba(0,0,0,0.08); }
+.btn{ background:#e76f51; color:#fff; border:none; padding:0.5rem 0.75rem; border-radius:6px; cursor:pointer; }
+.btn:hover{ opacity:0.95; }
+
+.lists-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:1rem; margin-top:1rem; }
+.card{ background:#fff; border-radius:8px; box-shadow:0 4px 14px rgba(16,24,40,0.06); padding:1rem; display:flex; flex-direction:column; gap:0.5rem; position:relative; }
+.card h3{ margin:0; font-size:0.95rem; }
+.card .delete-button{ position:absolute; left:0.75rem; bottom:0.75rem; background:transparent; border:none; color:#777; font-size:0.75rem; padding:0.25rem 0.4rem; border-radius:4px; cursor:pointer; transition:color 0.2s ease, background 0.2s ease; }
+.card .delete-button:hover{ color:#e63946; background:rgba(230,57,70,0.08); }
+.card .delete-button:focus{ outline:2px solid rgba(230,57,70,0.3); outline-offset:2px; }
+.meta{ font-size:0.85rem; color:#666; }
+.items{ margin:0; padding-left:1rem; }
+.items li{ margin:0.25rem 0; }
+
+.site-footer{ text-align:center; color:#666; padding:1rem 0; }
+
+/* 접근성용 숨김 클래스 */
+.visually-hidden{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
+.sr-only{ position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px); white-space:nowrap; }
+
+/* 반응형 */
+@media (max-width:900px){ .lists-grid{ grid-template-columns: repeat(2,1fr); } }
+@media (max-width:600px){ .lists-grid{ grid-template-columns:1fr; } .controls{ flex-direction:column; align-items:stretch; } }
+
+/* 간단한 focus 스타일 */
+button:focus, input:focus{ outline:3px solid rgba(42,157,143,0.18); outline-offset:2px; }
+
+/* 카드 내 코멘트 줄임 */
+.comment{ color:#444; font-size:0.95rem; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
+
+/* 모달 */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.modal-content { background: #fff; border-radius: 8px; padding: 2rem; max-height: 90vh; overflow-y: auto; z-index: 1001; position: relative; }
+.add-form-modal { max-width: 600px; width: 90%; }
+.detail-modal { max-width: 700px; width: 90%; }
+.modal-close { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 2rem; cursor: pointer; color: #666; padding: 0; width: 2rem; height: 2rem; display: flex; align-items: center; justify-content: center; }
+.modal-close:hover { color: #111; }
+
+/* 폼 스타일 */
+.form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; }
+.form-group label { font-weight: 600; margin-bottom: 0.5rem; color: #111; }
+.form-group input[type="text"],
+.form-group textarea,
+.form-group select { padding: 0.75rem; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; font-size: 1rem; }
+.form-group input[type="text"]:focus,
+.form-group textarea:focus,
+.form-group select:focus { outline: none; border-color: #2a9d8f; box-shadow: 0 0 0 3px rgba(42, 157, 143, 0.1); }
+
+.form-section-title { font-weight: 700; font-size: 1.1rem; margin: 1.5rem 0 1rem; color: #111; }
+
+.item-group { background: #f5f5f5; padding: 1rem; border-radius: 6px; margin-bottom: 1rem; }
+.item-group h4 { margin: 0 0 0.75rem; font-size: 0.95rem; color: #333; }
+
+.item-input-group { display: grid; grid-template-columns: 1fr 140px; gap: 0.75rem; align-items: flex-end; }
+.item-input-group input { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+.item-input-group select { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
+
+.form-actions { display: flex; gap: 0.75rem; margin-top: 2rem; }
+.btn-primary { flex: 1; background: #2a9d8f; color: #fff; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-primary:hover { background: #248a7e; }
+.btn-secondary { flex: 1; background: #ddd; color: #111; border: none; padding: 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 600; }
+.btn-secondary:hover { background: #ccc; }
+
+/* 카드 - 목록 표시 */
+.card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(16, 24, 40, 0.12); }
+.card-genre { font-size: 0.8rem; color: #999; margin: 0.25rem 0 0.5rem; font-weight: 500; }
+
+/* 상세 보기 모달 */
+.detail-view { display: flex; flex-direction: column; }
+.detail-view h2 { margin: 0 0 0.5rem; font-size: 1.8rem; color: #111; }
+.detail-meta { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; }
+.detail-date { font-size: 0.85rem; color: #999; }
+.detail-age { font-size: 0.85rem; color: #999; }
+.detail-description { margin: 1.5rem 0; line-height: 1.6; color: #333; font-size: 1rem; }
+.detail-items { margin: 1.5rem 0; }
+.detail-items h3 { margin: 0 0 1rem; font-size: 1.1rem; color: #111; }
+.detail-items ol { margin: 0; padding-left: 1.5rem; }
+.detail-items li { margin: 0.75rem 0; display: flex; justify-content: space-between; align-items: center; }
+.detail-item-title { flex: 1; }
+.detail-item-age { font-size: 0.85rem; color: #999; margin-left: 1rem; }
+.detail-author { font-size: 0.9rem; color: #666; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; }
+
+/* 연령 배지 */
+.age-badge { display:inline-block; padding:0.15rem 0.5rem; border-radius:999px; font-size:0.75rem; font-weight:600; margin-left:0.6rem; }
+.age-badge.all { background:#2ecc71; color:#fff; }
+.age-badge._8 { background:#28d5e8; color:#222; }
+.age-badge._15 { background:#f1c40f; color:#222; }
+.age-badge._18 { background:#e74c3c; color:#fff; }
+.age-badge.ban { background:#111; color:#fff; }
+
+/* 항목별 장르 입력 스타일 */
+.item-genre-input { padding:0.45rem; border:1px solid #ddd; border-radius:4px; }
+

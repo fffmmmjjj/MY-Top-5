@@ -83,7 +83,7 @@ python -m http.server 8000
 ## 🛠️ 사용 기술
 
 - HTML / CSS / JavaScript (별도 라이브러리 없음)
-- 데이터: 로컬 JSON 파일 (`data/top5_lists.json`)
+- 데이터: 로컬 JSON 파일 (`data/top5_lists.json`) 또는 Google Sheets 공개 URL
 - 이미지: 로컬 파일 (`assets/images/`)
 
 ## 🌱 앞으로 만들 것 (다음 스텝 예고)
@@ -94,3 +94,11 @@ python -m http.server 8000
 4. 검색창에 글자를 입력하면 작품 이름·작성자로 필터링하기
 5. "추가하기" 버튼 → 입력 폼 → 새 Top5 등록 (먼저는 화면에만, 나중에 localStorage)
 6. (나중에) Gemini API 로 추천 멘트 자동 생성하기
+
+## ✅ 이번 커밋에 추가된 내용 (간단)
+
+- 기본 웹 UI (`index.html`)와 스타일(`css/style.css`) 추가
+- 데이터 로드 및 검색 기능을 담당하는 `js/main.js` 구현
+- 데모용 샘플 데이터 `data/top5_lists.json` 추가
+
+브라우저에서 `index.html`을 열거나 VS Code의 Live Server로 실행하면 바로 확인할 수 있습니다.
